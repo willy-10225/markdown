@@ -1,81 +1,279 @@
-# 🛡️ OWASP Top 10 — Security Guide for C# WebForms & Python  
-**Author:** Willy Lin (林俊宇)  
-**Company:** 虎門科技  
-**Version:** 2025  
-**Project Type:** Web Security | .NET WebForms | Python | 教育競賽系統（EulerCup / UGM / FloBook）
+# OWASP Top 10 – 完整安全指南 (Markdown 版本)
+
+本文件整理自你之前與我討論的所有 OWASP Top 10 主題，包含：
+
+- 中文名稱
+- 英文名稱
+- 攻擊原理
+- 攻擊方式（前端 → 後端流程）
+- 包含的子攻擊種類
+- 防禦方式（全局概念）
+- C# / Python 程式碼示範 (局部代碼)
 
 ---
 
-## 📛 Badges  
-![Language](https://img.shields.io/badge/language-C%23-blue.svg)
-![Language](https://img.shields.io/badge/language-Python-yellow.svg)
-![Security](https://img.shields.io/badge/Security-OWASP%20Top%2010-critical.svg)
-![Framework](https://img.shields.io/badge/.NET-WebForms-green.svg)
-![License](https://img.shields.io/badge/license-MIT-lightgrey.svg)
-![Status](https://img.shields.io/badge/Status-Active-brightgreen.svg)
+# 🛡️ OWASP Top 10 — Web 應用程式安全風險完整說明
 
 ---
 
-# 📘 OWASP Top 10 – 完整資安指南（含 C# WebForms + Python）
+## 1. **存取控制破壞 (Broken Access Control)**
 
-本文件是針對 **台灣常見企業專案 / 校園競賽平台 / 教育系統 / WebForms 遺留系統**  
-所設計的 **完整 OWASP Top 10 安全指南**。
+### 🔍 介紹
 
-內容包含：
+攻擊者利用後端未正確驗證「身分是否有權限」的漏洞，直接操作 URL、修改參數、或繞過前端 UI，存取本不該存取的後端 API 或檔案。
 
-- 攻擊介紹（白話＋實際 WebForms 例子）
-- 涉及攻擊手法（含 CSRF / XSS / Session Fixation）
-- 防禦方式（技術＋流程＋架構）
-- C# WebForms 程式碼
-- Python Flask 程式碼
-- 可直接放在 GitHub 的完整 Markdown
+### 💥 常見攻擊種類
 
----
+- 水平權限提升：普通使用者讀取別人資料
+- 垂直權限提升：一般帳戶操作管理員功能
+- URL 直接存取
+- 強制瀏覽（Force Browsing）
+- 修改 Cookie 或 Session 權限
 
-# 📑 目錄（自動 TOC）
+### 🛡 防禦方式
 
-- [A01 – 權限控制失效（Broken Access Control）](#a01--權限控制失效broken-access-control)
-- [A02 – 加密機制失效（Cryptographic Failures）](#a02--加密機制失效cryptographic-failures)
-- [A03 – 注入攻擊（Injection）](#a03--注入攻擊injection)
-- [A04 – 不安全設計（Insecure Design）](#a04--不安全設計insecure-design)
-- [A05 – 安全設定錯誤（Security Misconfiguration）](#a05--安全設定錯誤security-misconfiguration)
-- [A06 – 過時組件（Vulnerable and Outdated Components）](#a06--過時組件vulnerable-and-outdated-components)
-- [A07 – 身分驗證失效（Identification & Authentication Failures）](#a07--身分驗證失效identification--authentication-failures)
-- [A08 – 軟體與資料完整性問題（Software & Data Integrity Failures）](#a08--軟體與資料完整性問題software--data-integrity-failures)
-- [A09 – 記錄與監控不足（Security Logging and Monitoring Failures）](#a09--記錄與監控不足security-logging-and-monitoring-failures)
-- [A10 – SSRF（Server-Side Request Forgery）](#a10--ssrfserver-side-request-forgery)
+- 所有敏感頁面後端必須檢查權限（不要依賴前端）
+- API 層檢查 session / token / role
+- 限制目錄瀏覽
+- 鎖定 ID 參數與帳戶關係
 
----
+### 🧩 C#（ASP.NET Web Forms）
 
-# A01 – 權限控制失效（Broken Access Control）
-
-## 📘 攻擊介紹
-後端未檢查使用者的身份與角色 → 攻擊者能：
-
-- 看他人資料
-- 修改他人資料
-- 一般使用者變管理員
-- 直接推 URL 看內容（IDOR）
-- 未登入也能存取
-
-## 🔥 涉及攻擊
-- IDOR（Insecure Direct Object Reference）
-- 水平越權 / 垂直越權
-- CSRF 結合越權攻擊
-- Session Fixation
-
-## 🛡 防禦方式
-- 所有修改頁面都要驗證 Session["role"]
-- URL 不可作為身份依據
-- 更新 Session ID（防 Fixation）
-
-## 🧩 C# WebForms
 ```csharp
-if (Session["user"] == null)
-    Response.Redirect("~/login.aspx");
-
-if (Session["role"].ToString() != "judge")
+if (Session["role"]?.ToString() != "admin")
 {
     Response.StatusCode = 403;
     Response.End();
 }
+```
+
+### 🧩 Python（Flask）
+
+```python
+if session.get("role") != "admin":
+    return "Forbidden", 403
+```
+
+---
+
+## 2. **加密失效 (Cryptographic Failures)**
+
+### 🔍 介紹
+
+使用弱加密、錯誤加密方式、或直接明文儲存敏感資料（密碼、手機、Email、身分資訊）。
+
+### 💥 子攻擊種類
+
+- 密碼明文儲存
+- 使用 SHA-1、MD5
+- 未加鹽的 SHA256
+- 明文傳輸資料
+- 私密金鑰洩漏
+
+### 🛡 防禦方式
+
+- 密碼使用 PBKDF2 / bcrypt / Argon2
+- 敏感資料加密後存 DB
+- HTTPS 強制啟用
+- 秘密金鑰存於環境變數
+
+### 🧩 C# PBKDF2 密碼儲存
+
+```csharp
+using var rng = RandomNumberGenerator.Create();
+var salt = new byte[16];
+rng.GetBytes(salt);
+
+var pbkdf2 = new Rfc2898DeriveBytes(password, salt, 10000);
+var hash = pbkdf2.GetBytes(32);
+
+return $"{10000}.{Convert.ToBase64String(salt)}.{Convert.ToBase64String(hash)}";
+```
+
+---
+
+## 3. **注入攻擊 (Injection)**
+
+### 🔍 介紹
+
+攻擊者透過未清洗的輸入，把惡意指令注入你的 SQL、OS 指令、XPath、LDAP、NoSQL 中。
+
+### 💥 子攻擊種類
+
+- SQL Injection
+- OS Command Injection
+- LDAP Injection
+- NoSQL Injection
+- ORM Injection
+
+### 🛡 防禦方式
+
+- 統一使用 Prepared Statement
+- 禁止字串拼接 SQL
+- ORM 使用參數化查詢
+- Validate Input
+
+### 🧩 C# 防 SQL Injection
+
+```csharp
+var cmd = new SqlCommand("SELECT * FROM Users WHERE id=@id", con);
+cmd.Parameters.AddWithValue("@id", userId);
+```
+
+---
+
+## 4. **不安全設計 (Insecure Design)**
+
+### 🔍 介紹
+
+根本性的設計漏洞，例如：
+
+- 沒有限制登入錯誤次數
+- 沒有權限分級
+- 壞的 Session 設計
+- 未考慮攻擊流程
+
+### 🛡 防禦方式
+
+- Threat Modeling
+- 強制 RBAC 權限模型
+- 設計階段就加入安全性需求
+
+---
+
+## 5. **安全設定錯誤 (Security Misconfiguration)**
+
+### 🔍 介紹
+
+伺服器、DB、IIS、Nginx、CORS、Headers 設得太鬆導致可被攻擊。
+
+### 💥 子攻擊
+
+- Directory Listing
+- 預設帳密未修改
+- Headers 缺失（X-Frame、X-XSS、防 MIME sniffing）
+- 錯誤訊息顯示 StackTrace
+
+### 🛡 防禦方式
+
+- 關閉 Directory Listing
+- 自訂 error pages
+- 強化 HTTP Security Headers
+
+---
+
+## 6. **易受攻擊與舊元件 (Vulnerable & Outdated Components)**
+
+### 🔍 介紹
+
+你使用的 DLL、NuGet、Python packages 版本太舊且含漏洞。
+
+### 🛡 防禦方式
+
+- pip / NuGet 定期升級
+- 不使用 EOL 的框架
+- 啟用自動安全更新
+- 用 GitHub Dependabot
+
+---
+
+## 7. **身分驗證與 Session 管理破壞 (Broken Authentication & Session Management)**
+
+### 🔍 介紹
+
+攻擊者盜取或偽造 SessionID 進入你的帳號。
+
+### 💥 子攻擊
+
+- Session Fixation
+- SessionID 可猜測
+- Cookie 可竄改
+- 密碼重置無限次
+- 永不過期的 Session
+
+### 🛡 防禦方式
+
+- 登入後重新產生 SessionID
+- Cookie 使用 HttpOnly + Secure
+- 限制 Session timeout
+- 加上第二組 Token（Double Submit Cookie）
+
+### 🧩 C#（登入後重新產生 SessionID）
+
+```csharp
+SessionIDManager manager = new SessionIDManager();
+string newID = manager.CreateSessionID(Context);
+manager.SaveSessionID(Context, newID, out _, out _);
+```
+
+---
+
+## 8. **軟體與資料完整性失效 (Software Integrity Failures)**
+
+### 🔍 介紹
+
+攻擊者修改你的更新檔、程式碼、JSON、CDN 外部程式庫。
+
+### 🛡 防禦方式
+
+- 確保更新來源可信（如 HTTPS）
+- CDN 檔案使用 SRI（Subresource Integrity）
+- 版本簽名檢查
+
+---
+
+## 9. **安全記錄與監控不足 (Security Logging & Monitoring Failures)**
+
+### 🔍 介紹
+
+你沒有 Log、Log 沒寫錯誤、防駭事件無法追查。
+
+### 🛡 防禦方式
+
+- 重要事件記錄 Log（登入失敗、異常行為）
+- 使用 NLog / Serilog
+- 監控 500 / 403 事件
+
+### 🧩 C# NLog Example
+
+```csharp
+logger.Error(ex, "Login error!");
+```
+
+---
+
+## 10. **伺服器端請求偽造（SSRF） (Server-Side Request Forgery)**
+
+### 🔍 介紹
+
+攻擊者誘導你的後端去抓「他指定的網址」，達到：
+
+- 掃描內網 IP
+- 讀取 Metadata（AWS / Azure）
+- 變相當 Proxy
+
+### 🛡 防禣方式
+
+- 後端對外部 URL 做白名單限制
+- 禁止讀內網（127.0.0.1、169.254.169.254）
+- 禁止自由轉發 URL
+
+### 🧩 C# SSRF 防禦
+
+```csharp
+if (!url.StartsWith("https://trusted.com"))
+    throw new Exception("Blocked SSRF attempt");
+```
+
+---
+
+# ✔ 完整版 OWASP Top10 整理完畢
+
+如需：
+
+- 加入圖示版
+- 加入流程圖
+- 加入各攻擊的「真實範例」
+- 區分 WebForms / MVC / .NET Core 防禦
+
+我也可以繼續擴充。
