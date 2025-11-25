@@ -1,0 +1,20 @@
+@echo off
+
+:: 檢查 IIS 是否啟用
+dism /online /get-features /format:table | findstr IIS-WebServer > nul
+if %errorlevel% equ 0 (
+    echo IIS 已啟用，跳過此步驟。
+) else (
+    echo IIS 尚未啟用，正在啟用...
+    dism /online /enable-feature /featurename:IIS-WebServer /all
+    echo IIS 已啟用！
+)
+
+:: 執行其他任務
+echo 配置 IIS 網站...
+:: Add IIS configuration commands here
+
+echo 解壓縮網站檔案...
+:: Add file extraction commands here
+
+pause
